@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-materials-science"
+version = "0.1.0"
+description = "A Python agent for automated materials science workflows, focusing on surface adsorption analysis"
+readme = "README.md"
+authors = [
+    { name = "Raghavendra Meena", email = "raghavendra.ip2020@gmail.com" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+keywords = ["materials-science", "computational-chemistry", "adsorption", "DFT", "machine-learning"]
+
+dependencies = [
+    "mp-api>=0.41.2",
+    "pymatgen>=2024.2.20",
+    "ase>=3.22.1",
+    "fairchem-core>=1.0.0",
+    "numpy>=1.24.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/raghavendram3/agent_materials_science"
+Repository = "https://github.com/raghavendram3/agent_materials_science"
+Issues = "https://github.com/raghavendram3/agent_materials_science/issues"
+
+[project.scripts]
+agent-materials-science = "agent_materials_science.cli:main"
+
+[tool.setuptools]
+packages = ["agent_materials_science", "agent_materials_science.core", "agent_materials_science.tools"]
+
+[tool.setuptools.package-data]
+agent_materials_science = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
