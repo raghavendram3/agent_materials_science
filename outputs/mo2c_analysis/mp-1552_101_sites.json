@@ -1,0 +1,611 @@
+{
+  "n_sites": 24,
+  "adsorbate": "H2",
+  "sites": [
+    {
+      "position": [
+        3.019100403634766,
+        14.875215010815735,
+        25.316402549297077
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        47,
+        130,
+        58
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.07279318537823176,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          2.9945415369181996,
+          5.209757019999999,
+          2.9945415369181996
+        ]
+      }
+    },
+    {
+      "position": [
+        4.479538147878254,
+        13.186024669337355,
+        25.316402549297077
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        130,
+        47,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.03940695490948176,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          2.9945415369181996,
+          4.231311795619701,
+          5.153339942232842
+        ]
+      }
+    },
+    {
+      "position": [
+        1.716661148634766,
+        14.667859527563433,
+        25.316402549297077
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        47,
+        58
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.01738852229229426,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo"
+        ],
+        "bond_length": 2.9945415369181996
+      }
+    },
+    {
+      "position": [
+        6.926418168634765,
+        14.667859527563433,
+        25.316402549297077
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        119,
+        130
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.01737326350323176,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo"
+        ],
+        "bond_length": 2.994541536918199
+      }
+    },
+    {
+      "position": [
+        4.321539658634766,
+        14.667859527563433,
+        25.316402549297077
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        47,
+        130
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.0010288361061432383,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo"
+        ],
+        "bond_length": 2.9945415369181996
+      }
+    },
+    {
+      "position": [
+        3.039024928333332,
+        8.730837832364797,
+        24.956402420788812
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        71,
+        11,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.014014065598330738,
+      "metadata": {
+        "elements": [
+          "C",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          3.665432832934766,
+          4.2313117956197,
+          3.694506969419045
+        ]
+      }
+    },
+    {
+      "position": [
+        7.676561565455077,
+        8.947875577911418,
+        24.956402420788812
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        83,
+        128,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.02387124333270574,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          4.231311795619701,
+          5.2097570200000005,
+          5.151308686591797
+        ]
+      }
+    },
+    {
+      "position": [
+        5.347830984544921,
+        5.1244374529900805,
+        24.596402292280548
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        83,
+        11,
+        20
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.02522927555926824,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          5.20975702,
+          4.2313117956197015,
+          5.151308686591797
+        ]
+      }
+    },
+    {
+      "position": [
+        6.216123821211586,
+        13.186024669337355,
+        25.316402549297077
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        119,
+        130,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.05641824040301824,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          2.994541536918199,
+          5.153339942232842,
+          5.151308686591796
+        ]
+      }
+    },
+    {
+      "position": [
+        3.039024928333332,
+        11.279796582312352,
+        25.316402549297077
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        47,
+        71,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.09842568669208074,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "C",
+          "Mo"
+        ],
+        "edge_lengths": [
+          4.985011282037177,
+          3.694506969419045,
+          4.231311795619701
+        ]
+      }
+    },
+    {
+      "position": [
+        7.676561565455077,
+        3.849958078016302,
+        24.596402292280548
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        83,
+        20,
+        92
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.11325722966083074,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          5.151308686591797,
+          5.20975702,
+          4.2313117956197015
+        ]
+      }
+    },
+    {
+      "position": [
+        7.676561565455075,
+        11.496834327858975,
+        25.316402549297077
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        128,
+        119,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.11333352360614324,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          4.2313117956197015,
+          5.151308686591796,
+          5.2097570200000005
+        ]
+      }
+    },
+    {
+      "position": [
+        5.347830984544921,
+        7.673396202937639,
+        24.956402420788812
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        11,
+        83,
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.11443215641864324,
+      "metadata": {
+        "elements": [
+          "Mo",
+          "Mo",
+          "Mo"
+        ],
+        "edge_lengths": [
+          5.20975702,
+          5.151308686591797,
+          4.2313117956197
+        ]
+      }
+    },
+    {
+      "position": [
+        3.0191004036347664,
+        6.39891682796386,
+        24.596402292280548
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        11
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.33710366520770574,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        3.019100403634766,
+        14.045793077806533,
+        25.316402549297077
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        47
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.33710366520770574,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        8.228857423634764,
+        14.045793077806533,
+        25.316402549297077
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        119
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.33711892399676824,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        8.228857423634766,
+        6.39891682796386,
+        24.596402292280548
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        83
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.33714944157489324,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        10.005292146365232,
+        2.575478703042523,
+        24.236402163772283
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        92
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.36398965153583074,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        4.795535126365232,
+        2.575478703042523,
+        24.236402163772283
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        20
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.36402016911395574,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        4.795535126365231,
+        10.222354952885196,
+        24.956402420788812
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        56
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.36402016911395574,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        10.005292146365232,
+        10.222354952885196,
+        24.956402420788812
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        128
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.36405068669208074,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        1.3024392549999992,
+        9.57124171624533,
+        23.944614629990056
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        71
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.5376194122780182,
+      "metadata": {
+        "element": "C"
+      }
+    },
+    {
+      "position": [
+        0.41422189363476625,
+        15.289925977320335,
+        24.520148637020363
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        58
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.8346622589577057,
+      "metadata": {
+        "element": "Mo"
+      }
+    },
+    {
+      "position": [
+        5.623978913634765,
+        15.289925977320335,
+        24.520148637020363
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        130
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 0.8346622589577057,
+      "metadata": {
+        "element": "Mo"
+      }
+    }
+  ]
+}

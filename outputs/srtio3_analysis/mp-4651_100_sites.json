@@ -1,0 +1,344 @@
+{
+  "n_sites": 14,
+  "adsorbate": "O",
+  "sites": [
+    {
+      "position": [
+        5.2875926395900485,
+        0.0,
+        31.997458138663422
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        106
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -3.8730233010631494,
+      "metadata": {
+        "element": "Ti"
+      }
+    },
+    {
+      "position": [
+        2.4082232253230034,
+        4.726956964173791,
+        31.982938936914618
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        146
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -3.8730233010631494,
+      "metadata": {
+        "element": "Ti"
+      }
+    },
+    {
+      "position": [
+        7.383187946050636,
+        2.9791143436658247,
+        32.04970696075776
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        101,
+        109
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -3.860129624305337,
+      "metadata": {
+        "elements": [
+          "Sr",
+          "O"
+        ],
+        "bond_length": 2.8852530074986857
+      }
+    },
+    {
+      "position": [
+        4.50381853178359,
+        7.706071307839616,
+        32.035187759008956
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        141,
+        149
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -3.860099106727212,
+      "metadata": {
+        "elements": [
+          "Sr",
+          "O"
+        ],
+        "bond_length": 2.8852530074986857
+      }
+    },
+    {
+      "position": [
+        5.943503238917113,
+        5.34259282575272,
+        32.04970696075776
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        109,
+        141
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -3.3250191506725244,
+      "metadata": {
+        "elements": [
+          "O",
+          "Sr"
+        ],
+        "bond_length": 2.6545137136797328
+      }
+    },
+    {
+      "position": [
+        3.8511886999942004,
+        5.6132613949563765,
+        31.982938936914618
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        141,
+        146
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -1.493094712195962,
+      "metadata": {
+        "elements": [
+          "Sr",
+          "Ti"
+        ],
+        "bond_length": 3.3868558172585415
+      }
+    },
+    {
+      "position": [
+        6.730558114261246,
+        0.8863044307825858,
+        31.997458138663422
+      ],
+      "site_type": "bridge",
+      "coordinating_atoms": [
+        101,
+        106
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -1.493064194617837,
+      "metadata": {
+        "elements": [
+          "Sr",
+          "Ti"
+        ],
+        "bond_length": 3.3868558172585423
+      }
+    },
+    {
+      "position": [
+        6.6846561772304405,
+        1.9860762291105498,
+        32.04970696075776
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        109,
+        106,
+        101
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.9344246682506494,
+      "metadata": {
+        "elements": [
+          "O",
+          "Ti",
+          "Sr"
+        ],
+        "edge_lengths": [
+          4.384728732159544,
+          3.3868558172585423,
+          2.8852530074986857
+        ]
+      }
+    },
+    {
+      "position": [
+        3.8052867629633944,
+        6.713033193284342,
+        32.035187759008956
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        141,
+        149,
+        146
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.9343331155162744,
+      "metadata": {
+        "elements": [
+          "Sr",
+          "O",
+          "Ti"
+        ],
+        "edge_lengths": [
+          2.8852530074986857,
+          4.384728732159544,
+          3.3868558172585415
+        ]
+      }
+    },
+    {
+      "position": [
+        4.765076567719077,
+        5.137380871893077,
+        32.04970696075776
+      ],
+      "site_type": "hollow",
+      "coordinating_atoms": [
+        109,
+        141,
+        146
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.8888466653209619,
+      "metadata": {
+        "elements": [
+          "O",
+          "Sr",
+          "Ti"
+        ],
+        "edge_lengths": [
+          2.6545137136797328,
+          3.3868558172585415,
+          4.220026585885419
+        ]
+      }
+    },
+    {
+      "position": [
+        8.173523588932444,
+        1.7726088615651716,
+        31.99019821949319
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        101
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.7494423684459619,
+      "metadata": {
+        "element": "Sr"
+      }
+    },
+    {
+      "position": [
+        5.2941541746653975,
+        6.499565825738962,
+        31.975679017744387
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        141
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": -0.7493508157115869,
+      "metadata": {
+        "element": "Sr"
+      }
+    },
+    {
+      "position": [
+        6.592852303168829,
+        4.185619825766478,
+        32.04970696075776
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        109
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 2.291298598350913,
+      "metadata": {
+        "element": "O"
+      }
+    },
+    {
+      "position": [
+        3.7134828889017837,
+        8.91257678994027,
+        32.035187759008956
+      ],
+      "site_type": "top",
+      "coordinating_atoms": [
+        149
+      ],
+      "surface_normal": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "energy": 2.291298598350913,
+      "metadata": {
+        "element": "O"
+      }
+    }
+  ]
+}
