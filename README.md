@@ -1,5 +1,5 @@
 # Materials Science Adsorption Agent
-![MSA] ML_ads.png
+![MSA] (ML_ads.png)
 A Python agent for automated materials science workflows, focusing on surface adsorption analysis using Materials Project data, ASE/pymatgen tools, and FairChem UMA machine learning potentials.
 
 ## Features
