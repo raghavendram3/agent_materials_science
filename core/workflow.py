@@ -23,7 +23,9 @@ from ..config import AgentConfig
 from ..tools.materials_project import MaterialsProjectTool
 from ..tools.ase_tools import save_outputs, get_slab_info
 from ..tools.converters import create_adsorbate, place_adsorbate_at_site
-from ..tools.fairchem_calc import FairchemCalculator, FAIRCHEM_AVAILABLE
+from ..tools.fairchem_calc import (
+    FairchemCalculator, FAIRCHEM_AVAILABLE, ADSORBATE_REFERENCE_ENERGIES
+)
 
 from .surface import SurfaceBuilder, TerminationInfo, miller_to_string
 from .adsorption import AdsorptionSiteFinder, AdsorptionSite
@@ -349,7 +351,14 @@ class AdsorptionWorkflow:
         sites: List[AdsorptionSite],
         adsorbate: Atoms,
     ) -> Tuple[List[AdsorptionSite], Dict[str, float]]:
-        """Calculate adsorption energies for sites."""
+        """
+        Calculate adsorption energies for sites using FairChem ML potential.
+        
+        Uses reference energies for isolated adsorbates since FairChem cannot
+        calculate energies for single atoms or small molecules (no edges in graph).
+        
+        E_ads = E(slab+ads) - E(slab) - E(ads_reference)
+        """
         try:
             # Initialize calculator
             calc = FairchemCalculator(
@@ -357,40 +366,61 @@ class AdsorptionWorkflow:
                 cpu=not self.config.use_gpu,
             )
             
-            # Calculate reference energies
+            # Calculate clean slab energy
+            self.log(f"    Calculating clean slab energy...")
             e_slab = calc.calculate_energy(slab)
-            e_ads = calc.calculate_energy(adsorbate)
-            
             self.log(f"    Clean slab energy: {e_slab:.3f} eV")
-            self.log(f"    Adsorbate energy: {e_ads:.3f} eV")
+            
+            # Get adsorbate reference energy (cannot calculate directly for single atoms)
+            adsorbate_name = self.config.adsorbate
+            if adsorbate_name in ADSORBATE_REFERENCE_ENERGIES:
+                e_ads = ADSORBATE_REFERENCE_ENERGIES[adsorbate_name]
+                self.log(f"    Adsorbate reference energy ({adsorbate_name}): {e_ads:.3f} eV")
+            else:
+                # Try to calculate if it's a larger molecule
+                try:
+                    e_ads = calc.calculate_energy(adsorbate)
+                    self.log(f"    Adsorbate energy (calculated): {e_ads:.3f} eV")
+                except Exception as e:
+                    self.warnings.append(
+                        f"No reference energy for '{adsorbate_name}'. "
+                        f"Available: {list(ADSORBATE_REFERENCE_ENERGIES.keys())}. "
+                        f"Using e_ads=0 (relative energies only)."
+                    )
+                    e_ads = 0.0
+                    self.log(f"    Adsorbate energy: Using 0 (relative energies only)")
             
             # Calculate energy for each site
             n_sites = len(sites)
             for i, site in enumerate(sites):
-                self.log(f"    Calculating site {i+1}/{n_sites}...")
+                self.log(f"    Calculating site {i+1}/{n_sites} ({site.site_type})...")
                 
                 # Place adsorbate at site
                 slab_with_ads = place_adsorbate_at_site(
                     slab, adsorbate, site.position
                 )
                 
-                # Optionally relax
+                # Optionally relax structure
                 if self.config.relax_structures:
+                    self.log(f"      Relaxing structure...")
                     slab_with_ads = calc.relax_structure(
                         slab_with_ads,
                         fmax=self.config.relax_fmax,
                         steps=self.config.relax_steps,
                     )
                 
-                # Calculate energy
+                # Calculate energy of slab+adsorbate system
                 e_combined = calc.calculate_energy(slab_with_ads)
                 
-                # Adsorption energy
+                # Adsorption energy: E_ads = E(slab+ads) - E(slab) - E(ads)
                 site.energy = e_combined - e_slab - e_ads
+                self.log(f"      E_combined: {e_combined:.3f} eV, E_ads: {site.energy:.3f} eV")
             
             energy_data = {
                 "e_slab": e_slab,
-                "e_adsorbate": e_ads,
+                "e_adsorbate_reference": e_ads,
+                "adsorbate_name": adsorbate_name,
+                "reference_used": adsorbate_name in ADSORBATE_REFERENCE_ENERGIES,
             }
             
             return sites, energy_data

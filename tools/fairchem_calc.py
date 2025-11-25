@@ -29,6 +29,24 @@ except ImportError:
 
 FAIRCHEM_IMPORT_ERROR = None if FAIRCHEM_AVAILABLE else "fairchem-core not installed"
 
+# Reference energies for isolated atoms/molecules (in eV)
+# These are typical DFT reference values - adjust based on your reference state
+ADSORBATE_REFERENCE_ENERGIES = {
+    "H": -3.39,      # 1/2 H2 gas phase reference
+    "H2": -6.78,     # H2 molecule
+    "O": -4.93,      # 1/2 O2 gas phase reference  
+    "O2": -9.86,     # O2 molecule
+    "C": -7.37,      # Graphite reference
+    "CO": -14.79,    # CO molecule
+    "CO2": -22.96,   # CO2 molecule
+    "N": -8.32,      # 1/2 N2 gas phase reference
+    "N2": -16.64,    # N2 molecule
+    "OH": -8.32,     # OH radical
+    "H2O": -14.22,   # H2O molecule
+    "CH4": -24.03,   # Methane
+    "NH3": -19.54,   # Ammonia
+}
+
 
 class FairchemCalculator:
     """
@@ -41,7 +59,7 @@ class FairchemCalculator:
     
     def __init__(
         self,
-        model_name: str = "uma-s-1",
+        model_name: str = "uma-s-1p1",
         checkpoint_path: Optional[str] = None,
         cpu: bool = True,
         task_name: str = "omat"
@@ -203,9 +221,11 @@ class FairchemCalculator:
         self,
         slab_with_adsorbate: Atoms,
         clean_slab: Atoms,
-        adsorbate: Atoms,
+        adsorbate: Optional[Atoms] = None,
+        adsorbate_name: Optional[str] = None,
         relax: bool = False,
-        fmax: float = 0.05
+        fmax: float = 0.05,
+        use_reference_energy: bool = True
     ) -> Dict[str, float]:
         """
         Calculate adsorption energy.
@@ -214,12 +234,23 @@ class FairchemCalculator:
         
         A negative adsorption energy indicates favorable binding.
         
+        Note: For isolated adsorbates (single atoms or small molecules), FairChem
+        cannot calculate energies directly due to the graph cutoff radius. Use
+        either `adsorbate_name` with reference energies, or provide your own
+        reference energy.
+        
         Args:
             slab_with_adsorbate: Slab with adsorbate placed on it
             clean_slab: Clean slab without adsorbate
-            adsorbate: Isolated adsorbate molecule
+            adsorbate: Isolated adsorbate molecule (optional if using reference)
+            adsorbate_name: Name of adsorbate for reference energy lookup 
+                           (e.g., 'H', 'CO', 'O', 'H2O'). Required if adsorbate
+                           is a single atom or small molecule.
             relax: Whether to relax structures before calculating energies
             fmax: Maximum force for relaxation
+            use_reference_energy: If True, use tabulated reference energies for
+                                  the adsorbate instead of calculating directly.
+                                  Recommended for single atoms and small molecules.
             
         Returns:
             Dictionary with energies:
@@ -227,21 +258,78 @@ class FairchemCalculator:
                 - 'e_combined': E(slab+ads) in eV
                 - 'e_slab': E(slab) in eV
                 - 'e_adsorbate': E(ads) in eV
+                - 'reference_used': Whether reference energy was used
         """
-        # Optionally relax structures
+        # Optionally relax structures (only slab structures, not isolated adsorbate)
         if relax:
             slab_with_ads_calc = self.relax_structure(slab_with_adsorbate, fmax=fmax)
             clean_slab_calc = self.relax_structure(clean_slab, fmax=fmax)
-            adsorbate_calc = self.relax_structure(adsorbate, fmax=fmax)
         else:
             slab_with_ads_calc = slab_with_adsorbate
             clean_slab_calc = clean_slab
-            adsorbate_calc = adsorbate
         
-        # Calculate energies
+        # Calculate energies for slab systems
         e_combined = self.calculate_energy(slab_with_ads_calc)
         e_slab = self.calculate_energy(clean_slab_calc)
-        e_ads = self.calculate_energy(adsorbate_calc)
+        
+        # Get adsorbate energy - use reference if available/requested
+        reference_used = False
+        e_ads = None
+        
+        # Try to determine adsorbate name from Atoms object if not provided
+        if adsorbate_name is None and adsorbate is not None:
+            # Try to infer from chemical formula
+            formula = adsorbate.get_chemical_formula()
+            if formula in ADSORBATE_REFERENCE_ENERGIES:
+                adsorbate_name = formula
+        
+        # Use reference energy if requested and available
+        if use_reference_energy and adsorbate_name is not None:
+            if adsorbate_name in ADSORBATE_REFERENCE_ENERGIES:
+                e_ads = ADSORBATE_REFERENCE_ENERGIES[adsorbate_name]
+                reference_used = True
+            else:
+                available = list(ADSORBATE_REFERENCE_ENERGIES.keys())
+                print(f"Warning: No reference energy for '{adsorbate_name}'. "
+                      f"Available: {available}. Attempting direct calculation.")
+        
+        # If no reference energy, try to calculate directly
+        if e_ads is None:
+            if adsorbate is None:
+                raise ValueError(
+                    "Either provide an adsorbate Atoms object or specify "
+                    "adsorbate_name for reference energy lookup."
+                )
+            
+            # Check if adsorbate can be calculated (needs multiple atoms within cutoff)
+            if len(adsorbate) == 1:
+                raise ValueError(
+                    f"Cannot calculate energy for single atom '{adsorbate.get_chemical_formula()}'. "
+                    f"Use adsorbate_name parameter with one of: {list(ADSORBATE_REFERENCE_ENERGIES.keys())}"
+                )
+            
+            # Check if atoms are close enough (within 6 Å cutoff)
+            if len(adsorbate) > 1:
+                from ase.geometry import get_distances
+                positions = adsorbate.get_positions()
+                _, distances = get_distances(positions, cell=adsorbate.get_cell(), pbc=adsorbate.get_pbc())
+                min_dist = np.min(distances[distances > 0]) if np.any(distances > 0) else float('inf')
+                
+                if min_dist > 6.0:
+                    raise ValueError(
+                        f"Adsorbate atoms are {min_dist:.2f} Å apart, exceeding the 6 Å cutoff. "
+                        f"Use adsorbate_name parameter with one of: {list(ADSORBATE_REFERENCE_ENERGIES.keys())}"
+                    )
+            
+            try:
+                e_ads = self.calculate_energy(adsorbate)
+            except Exception as e:
+                if "No edges found" in str(e) or "single atom" in str(e).lower():
+                    raise ValueError(
+                        f"Cannot calculate isolated adsorbate energy directly. "
+                        f"Use adsorbate_name parameter with one of: {list(ADSORBATE_REFERENCE_ENERGIES.keys())}"
+                    ) from e
+                raise
         
         # Calculate adsorption energy
         e_adsorption = e_combined - e_slab - e_ads
@@ -251,6 +339,7 @@ class FairchemCalculator:
             "e_combined": e_combined,
             "e_slab": e_slab,
             "e_adsorbate": e_ads,
+            "reference_used": reference_used,
         }
 
 
@@ -299,7 +388,7 @@ def check_fairchem_installation() -> Dict[str, bool]:
 
 
 def create_calculator(
-    model: str = "uma-s-1",
+    model: str = "uma-s-1p1",
     cpu: bool = True
 ) -> Optional[Calculator]:
     """

@@ -85,7 +85,7 @@ print(f"Output files: {result.output_files}")
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MP_API_KEY` | Materials Project API key | Required |
-| `FAIRCHEM_MODEL` | FairChem model name | `uma-s-1` |
+| `FAIRCHEM_MODEL` | FairChem model name | `uma-s-1p1` |
 | `FAIRCHEM_DEVICE` | Device for ML calculations | `cpu` |
 
 ### Supported Adsorbates

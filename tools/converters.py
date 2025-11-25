@@ -20,12 +20,20 @@ ADSORBATE_GEOMETRIES = {
     "F": [("F", (0, 0, 0))],
     "Cl": [("Cl", (0, 0, 0))],
     
-    # Diatomic molecules (binding atom at origin)
+    # Diatomic homonuclear molecules
+    "H2": [("H", (0, 0, 0)), ("H", (0, 0, 0.74))],  # H-H bond ~0.74 Å
+    "O2": [("O", (0, 0, 0)), ("O", (0, 0, 1.21))],  # O=O bond ~1.21 Å
+    "N2": [("N", (0, 0, 0)), ("N", (0, 0, 1.10))],  # N≡N bond ~1.10 Å
+    
+    # Diatomic heteronuclear molecules (binding atom at origin)
     "CO": [("C", (0, 0, 0)), ("O", (0, 0, 1.128))],  # C-down
     "OC": [("O", (0, 0, 0)), ("C", (0, 0, 1.128))],  # O-down
     "OH": [("O", (0, 0, 0)), ("H", (0, 0, 0.97))],
+    "HO": [("H", (0, 0, 0)), ("O", (0, 0, 0.97))],  # H-down (for dissociation studies)
     "NO": [("N", (0, 0, 0)), ("O", (0, 0, 1.15))],
     "ON": [("O", (0, 0, 0)), ("N", (0, 0, 1.15))],
+    "HF": [("H", (0, 0, 0)), ("F", (0, 0, 0.92))],
+    "HCl": [("H", (0, 0, 0)), ("Cl", (0, 0, 1.27))],
     
     # Water and hydroxyl
     "H2O": [
