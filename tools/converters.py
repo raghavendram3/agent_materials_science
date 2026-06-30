@@ -157,40 +157,50 @@ def place_adsorbate_at_site(
     slab: Atoms,
     adsorbate: Atoms,
     site_position: np.ndarray,
-    height_offset: float = 0.0
+    height_offset: float = 0.0,
+    anchor_index: int = 0,
 ) -> Atoms:
     """
     Place an adsorbate at a specific position on the slab.
-    
+
+    The adsorbate is positioned so that its *binding atom* (the anchor atom)
+    sits at ``site_position``. The binding atom is, by convention, the first
+    atom of the adsorbate geometry (e.g. C in CO, O in OH). Using the binding
+    atom rather than the centre of mass ensures the atom that bonds to the
+    surface is placed at the intended height; placing by centre of mass leaves
+    the binding atom below (or above) the requested site.
+
     Args:
         slab: ASE Atoms slab (clean)
         adsorbate: ASE Atoms adsorbate molecule
-        site_position: 3D position (x, y, z) for placement
+        site_position: 3D position (x, y, z) for placement of the binding atom
         height_offset: Additional height offset (Angstrom)
-        
+        anchor_index: Index of the binding atom within the adsorbate (default 0)
+
     Returns:
         Combined ASE Atoms (slab + adsorbate)
     """
     combined = slab.copy()
     ads_copy = adsorbate.copy()
-    
-    # Get adsorbate center of mass (or first atom for single atoms)
-    if len(ads_copy) == 1:
-        ads_center = ads_copy.get_positions()[0]
-    else:
-        ads_center = ads_copy.get_center_of_mass()
-    
+
+    if len(ads_copy) == 0:
+        return combined
+
+    # Reference point is the binding (anchor) atom, not the centre of mass.
+    idx = anchor_index if 0 <= anchor_index < len(ads_copy) else 0
+    ads_anchor = ads_copy.get_positions()[idx]
+
     # Calculate translation vector
-    target_pos = np.array(site_position)
+    target_pos = np.array(site_position, dtype=float)
     target_pos[2] += height_offset
-    translation = target_pos - ads_center
-    
+    translation = target_pos - ads_anchor
+
     # Translate adsorbate
     ads_copy.translate(translation)
-    
+
     # Combine slab and adsorbate
     combined.extend(ads_copy)
-    
+
     return combined
 
 

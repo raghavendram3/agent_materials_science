@@ -41,7 +41,11 @@ ADSORBATE_REFERENCE_ENERGIES = {
     "CO2": -22.96,   # CO2 molecule
     "N": -8.32,      # 1/2 N2 gas phase reference
     "N2": -16.64,    # N2 molecule
-    "OH": -8.32,     # OH radical
+    # NOTE: the OH value below is identical to N and is almost certainly a
+    # placeholder/copy-paste artefact. Replace it with a value computed in your
+    # own reference state (and ideally with the active FairChem model) before
+    # relying on absolute OH adsorption energies.
+    "OH": -8.32,     # OH radical (PLACEHOLDER - verify before use)
     "H2O": -14.22,   # H2O molecule
     "CH4": -24.03,   # Methane
     "NH3": -19.54,   # Ammonia
@@ -62,7 +66,7 @@ class FairchemCalculator:
         model_name: str = "uma-s-1p1",
         checkpoint_path: Optional[str] = None,
         cpu: bool = True,
-        task_name: str = "omat"
+        task_name: str = "oc20"
     ):
         """
         Initialize FairChem calculator.
@@ -75,7 +79,12 @@ class FairchemCalculator:
                        - 'esen-*': Various ESEN models
             checkpoint_path: Optional path to a custom checkpoint file
             cpu: If True, force CPU usage. If False, use CUDA if available.
-            task_name: Task name for the calculator (e.g., 'omat', 'oc20')
+            task_name: UMA task head to use. For surface adsorption /
+                       catalysis this should be 'oc20' (Open Catalyst). Use
+                       'omat' only for bulk inorganic materials and 'omol'
+                       for isolated molecules. Mixing tasks between the slab
+                       and the adsorbate reference makes the resulting
+                       adsorption energies physically meaningless.
         """
         if not FAIRCHEM_AVAILABLE:
             error_msg = (
@@ -353,6 +362,7 @@ def get_available_models() -> List[str]:
     return [
         "uma-s-1",
         "uma-s-1p1",
+        "uma-s-1p2",
         "uma-m-1p1",
         "esen-md-direct-all-omol",
         "esen-sm-conserving-all-omol",

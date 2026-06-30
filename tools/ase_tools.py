@@ -5,6 +5,7 @@ ASE (Atomic Simulation Environment) utilities for structure manipulation.
 import os
 from typing import Tuple, List, Dict, Any, Optional
 
+import numpy as np
 from ase.atoms import Atoms
 from ase.build import surface
 from ase.io import write, read
@@ -186,22 +187,31 @@ def fix_bottom_layers(
     atoms_copy = atoms.copy()
     positions = atoms_copy.get_positions()
     z_coords = positions[:, 2]
-    
-    # Find unique z positions (layers)
-    z_sorted = sorted(set(z_coords))
-    
-    # Identify bottom layers
-    fixed_indices = []
-    for i, z in enumerate(z_coords):
-        for layer_idx in range(min(n_layers, len(z_sorted))):
-            if abs(z - z_sorted[layer_idx]) < tolerance:
-                fixed_indices.append(i)
-                break
-    
+
+    # Cluster atoms into layers: two atoms belong to the same layer if their
+    # z-coordinates are within ``tolerance``. Using the raw set of unique
+    # floating-point z-values (as a naive implementation does) treats almost
+    # every atom as its own "layer" because of numerical noise.
+    order = np.argsort(z_coords)
+    layers = []  # list of representative z for each layer (ascending)
+    layer_of_atom = {}
+    for idx in order:
+        z = z_coords[idx]
+        if layers and abs(z - layers[-1]) < tolerance:
+            layer_id = len(layers) - 1
+        else:
+            layers.append(z)
+            layer_id = len(layers) - 1
+        layer_of_atom[idx] = layer_id
+
+    # Fix the atoms that belong to the lowest ``n_layers`` layers.
+    n_fix = min(n_layers, len(layers))
+    fixed_indices = [int(i) for i, lid in layer_of_atom.items() if lid < n_fix]
+
     if fixed_indices:
-        constraint = FixAtoms(indices=fixed_indices)
+        constraint = FixAtoms(indices=sorted(fixed_indices))
         atoms_copy.set_constraint(constraint)
-    
+
     return atoms_copy
 
 
@@ -277,8 +287,11 @@ def get_slab_info(atoms: Atoms) -> Dict[str, Any]:
     z_unique = sorted(set(round(z, 2) for z in z_coords))
     n_layers_estimate = len(z_unique)
     
-    # Get surface area
-    surface_area = abs(cell[0][0] * cell[1][1] - cell[0][1] * cell[1][0])
+    # Get surface area as the magnitude of the cross product of the two
+    # in-plane cell vectors. Using only the z-component (a_x*b_y - a_y*b_x)
+    # is wrong whenever the cell vectors are not aligned with the xy-plane,
+    # which is common for pymatgen-generated slabs.
+    surface_area = float(np.linalg.norm(np.cross(cell[0], cell[1])))
     
     return {
         "formula": atoms.get_chemical_formula(),
