@@ -28,7 +28,10 @@ from ..tools.fairchem_calc import (
 )
 
 from .surface import SurfaceBuilder, TerminationInfo, miller_to_string
-from .adsorption import AdsorptionSiteFinder, AdsorptionSite
+from .adsorption import (
+    AdsorptionSiteFinder, AdsorptionSite,
+    find_sites_pymatgen, summarize_sites, PYMATGEN_ASF_AVAILABLE,
+)
 
 
 @dataclass
@@ -83,6 +86,8 @@ class WorkflowResult:
     
     def summary(self) -> str:
         """Generate a human-readable summary."""
+        thickness = self.slab_info.get('thickness')
+        thickness_str = f"{thickness:.2f} Å" if isinstance(thickness, (int, float)) else "? Å"
         lines = [
             "=" * 60,
             "ADSORPTION ANALYSIS RESULTS",
@@ -92,7 +97,7 @@ class WorkflowResult:
             f"Adsorbate: {self.adsorbate}",
             "",
             f"Slab: {self.slab_info.get('n_atoms', '?')} atoms, "
-            f"thickness: {self.slab_info.get('thickness', '?'):.2f} Å",
+            f"thickness: {thickness_str}",
             "",
             f"Total adsorption sites found: {len(self.sites)}",
         ]
@@ -319,28 +324,57 @@ class AdsorptionWorkflow:
             raise
     
     def _find_sites(self, slab: Atoms) -> Tuple[List[AdsorptionSite], Dict]:
-        """Find adsorption sites on slab."""
+        """Find adsorption sites on slab using the configured backend."""
+        backend = self.config.site_finder
+        use_pymatgen = (
+            backend == "pymatgen"
+            or (backend == "auto" and PYMATGEN_ASF_AVAILABLE)
+        )
+
+        if backend == "pymatgen" and not PYMATGEN_ASF_AVAILABLE:
+            self.warnings.append(
+                "site_finder='pymatgen' requested but pymatgen's "
+                "AdsorbateSiteFinder is unavailable; using built-in finder."
+            )
+            use_pymatgen = False
+
         try:
+            if use_pymatgen:
+                self.log("    Using pymatgen AdsorbateSiteFinder (symmetry-aware)")
+                # symm_reduce/near_reduce are pymatgen tolerances; 0 disables.
+                symm_tol = 0.01 if self.config.symm_reduce else 0.0
+                unique_sites = find_sites_pymatgen(
+                    slab,
+                    height_offset=self.config.height_offset,
+                    site_types=self.config.site_types,
+                    symm_reduce=symm_tol,
+                )
+                # Count surface atoms for the summary (top-layer heuristic).
+                z = slab.get_positions()[:, 2]
+                n_surface = int(np.sum((z.max() - z) < 1.5))
+                summary = summarize_sites(unique_sites, n_surface)
+                return unique_sites, summary
+
             finder = AdsorptionSiteFinder(
                 slab,
                 height_offset=self.config.height_offset,
             )
-            
+
             # Find all sites
             all_sites = finder.find_all_sites()
-            
+
             # Filter by type
             if self.config.site_types:
                 all_sites = finder.filter_by_type(all_sites, self.config.site_types)
-            
+
             # Remove duplicates
             unique_sites = finder.remove_duplicates(all_sites)
-            
+
             # Get summary
             summary = finder.get_site_summary(unique_sites)
-            
+
             return unique_sites, summary
-            
+
         except Exception as e:
             self.errors.append(f"Failed to find sites: {e}")
             raise
@@ -364,6 +398,7 @@ class AdsorptionWorkflow:
             calc = FairchemCalculator(
                 model_name=self.config.fairchem_model,
                 cpu=not self.config.use_gpu,
+                task_name=self.config.fairchem_task,
             )
             
             # Calculate clean slab energy
@@ -376,6 +411,15 @@ class AdsorptionWorkflow:
             if adsorbate_name in ADSORBATE_REFERENCE_ENERGIES:
                 e_ads = ADSORBATE_REFERENCE_ENERGIES[adsorbate_name]
                 self.log(f"    Adsorbate reference energy ({adsorbate_name}): {e_ads:.3f} eV")
+                self.warnings.append(
+                    "Adsorption energies use tabulated gas-phase reference "
+                    "energies that were NOT computed with the active FairChem "
+                    f"model/task ('{self.config.fairchem_model}'/"
+                    f"'{self.config.fairchem_task}'). Absolute E_ads values are "
+                    "therefore only approximate; for publication-quality numbers "
+                    "compute the reference with the same model and task, or use "
+                    "an AdsorbML-style workflow."
+                )
             else:
                 # Try to calculate if it's a larger molecule
                 try:
