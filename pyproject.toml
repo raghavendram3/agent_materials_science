@@ -27,11 +27,12 @@ classifiers = [
 keywords = ["materials-science", "computational-chemistry", "adsorption", "DFT", "machine-learning"]
 
 dependencies = [
-    "mp-api>=0.41.2",
+    "mp-api>=0.45",
     "pymatgen>=2024.2.20",
-    "ase>=3.22.1",
-    "fairchem-core>=1.0.0",
+    "ase>=3.23.0",
+    "fairchem-core>=2.0.0",
     "numpy>=1.24.0",
+    "scipy>=1.11.0",
     "python-dotenv>=1.0.0",
 ]
 

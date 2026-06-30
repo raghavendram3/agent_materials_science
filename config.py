@@ -52,6 +52,12 @@ class AgentConfig:
     adsorbate: str = "H"
     height_offset: float = 2.0
     site_types: List[str] = field(default_factory=lambda: ["top", "bridge", "hollow"])
+
+    # Site-finding backend: "auto" prefers pymatgen's AdsorbateSiteFinder when
+    # installed (symmetry-aware, fewer redundant sites) and falls back to the
+    # built-in geometric finder otherwise. Use "builtin" or "pymatgen" to force.
+    site_finder: str = "auto"
+    symm_reduce: bool = True  # collapse symmetry-equivalent sites (pymatgen backend)
     
     # Calculation parameters
     calculate_energies: bool = False
@@ -60,7 +66,8 @@ class AgentConfig:
     relax_steps: int = 200
     
     # FairChem settings
-    fairchem_model: str = "uma-s-1"
+    fairchem_model: str = "uma-s-1p1"
+    fairchem_task: str = "oc20"  # UMA task; "oc20" is the catalysis/adsorption head
     use_gpu: bool = False
     
     # Output settings
@@ -81,6 +88,11 @@ class AgentConfig:
         env_model = os.getenv("FAIRCHEM_MODEL")
         if env_model:
             self.fairchem_model = env_model
+
+        # Load FairChem task from environment if available
+        env_task = os.getenv("FAIRCHEM_TASK")
+        if env_task:
+            self.fairchem_task = env_task
         
         # Check GPU setting from environment
         env_device = os.getenv("FAIRCHEM_DEVICE", "").lower()
@@ -104,10 +116,20 @@ class AgentConfig:
         for st in self.site_types:
             if st not in valid_site_types:
                 raise ValueError(f"Invalid site type: {st}. Valid types: {valid_site_types}")
+
+        # Validate site-finder backend
+        valid_backends = {"auto", "builtin", "pymatgen"}
+        if self.site_finder not in valid_backends:
+            raise ValueError(
+                f"Invalid site_finder: {self.site_finder}. Valid: {valid_backends}"
+            )
     
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "AgentConfig":
         """Create configuration from dictionary."""
+        # Work on a copy so we never mutate the caller's dictionary.
+        config_dict = dict(config_dict)
+
         # Handle miller_indices if provided as list
         if "miller_indices" in config_dict and isinstance(config_dict["miller_indices"], list):
             config_dict["miller_indices"] = tuple(config_dict["miller_indices"])
@@ -132,11 +154,14 @@ class AgentConfig:
             "adsorbate": self.adsorbate,
             "height_offset": self.height_offset,
             "site_types": self.site_types,
+            "site_finder": self.site_finder,
+            "symm_reduce": self.symm_reduce,
             "calculate_energies": self.calculate_energies,
             "relax_structures": self.relax_structures,
             "relax_fmax": self.relax_fmax,
             "relax_steps": self.relax_steps,
             "fairchem_model": self.fairchem_model,
+            "fairchem_task": self.fairchem_task,
             "use_gpu": self.use_gpu,
             "output_dir": self.output_dir,
             "save_all_sites": self.save_all_sites,
@@ -212,6 +237,7 @@ ADSORBATES = {
 FAIRCHEM_MODELS = {
     "uma-s-1": "Universal Materials Accelerator - Small v1",
     "uma-s-1p1": "Universal Materials Accelerator - Small v1.1",
+    "uma-s-1p2": "Universal Materials Accelerator - Small v1.2 (latest small)",
     "uma-m-1p1": "Universal Materials Accelerator - Medium v1.1",
     "esen-md-direct-all-omol": "ESEN model for molecular dynamics",
     "esen-sm-conserving-all-omol": "ESEN small conserving model",

@@ -136,6 +136,19 @@ Examples:
         default=["top", "bridge", "hollow"],
         help="Site types to consider. Default: top bridge hollow"
     )
+    adsorbate_group.add_argument(
+        "--site-finder",
+        type=str,
+        choices=["auto", "builtin", "pymatgen"],
+        default="auto",
+        help="Adsorption-site backend. 'auto' prefers pymatgen's "
+             "symmetry-aware AdsorbateSiteFinder when installed. Default: auto"
+    )
+    adsorbate_group.add_argument(
+        "--no-symm-reduce",
+        action="store_true",
+        help="Keep all symmetry-equivalent sites (pymatgen backend only)"
+    )
     
     # Calculation parameters
     calc_group = parser.add_argument_group("Calculations")
@@ -152,8 +165,15 @@ Examples:
     calc_group.add_argument(
         "--model",
         type=str,
-        default="uma-s-1",
-        help="FairChem model name. Default: uma-s-1"
+        default="uma-s-1p1",
+        help="FairChem model name. Default: uma-s-1p1"
+    )
+    calc_group.add_argument(
+        "--task",
+        type=str,
+        default="oc20",
+        help="UMA task head ('oc20' for adsorption/catalysis, 'omat' for "
+             "bulk materials, 'omol' for molecules). Default: oc20"
     )
     calc_group.add_argument(
         "--gpu",
@@ -293,9 +313,12 @@ def main(argv=None):
         adsorbate=args.adsorbate,
         height_offset=args.height,
         site_types=args.site_types,
+        site_finder=args.site_finder,
+        symm_reduce=not args.no_symm_reduce,
         calculate_energies=args.calculate_energies,
         relax_structures=args.relax,
         fairchem_model=args.model,
+        fairchem_task=args.task,
         use_gpu=args.gpu,
         output_dir=args.output_dir,
         save_all_sites=args.save_all_sites,

@@ -5,25 +5,19 @@ python-dotenv>=1.0.1
 numpy>=1.24.0
 scipy>=1.11.0
 
-# Materials Project API
-mp-api>=0.44
+# Materials Project API (current client; uses `from mp_api.client import MPRester`)
+mp-api>=0.45
 
 # Structure handling
-pymatgen>=2023.8.10
+pymatgen>=2024.2.20
 ase>=3.23.0
 
-# Machine Learning Potentials (FairChem UMA)
-fairchem-core>=1.0.0
+# Machine Learning Potentials (FairChem UMA).
+# NOTE: UMA models require FairChem v2 and a (gated) Hugging Face account with
+# access granted to the UMA model repository. Install torch matching your CUDA
+# setup. Latest small model as of writing: uma-s-1p2.
+fairchem-core>=2.0.0
 torch>=2.0.0
 
-# Adsorption site analysis
-networkx>=3.0
-
-# Visualization (optional)
+# Visualization (optional, used by pymatgen plotting helpers)
 matplotlib>=3.7.0
-
-# CLI
-click>=8.0.0
-
-# Configuration
-pyyaml>=6.0

@@ -95,10 +95,27 @@ print(f"Output files: {result.output_files}")
 
 ### FairChem Models
 
-- `uma-s-1` (default) - Universal Materials Accelerator small
+UMA models require **FairChem v2** and a Hugging Face account with access
+granted to the UMA model repository (`huggingface-cli login`).
+
+- `uma-s-1p2` - UMA small v1.2 (latest small model; recommended)
 - `uma-s-1p1` - UMA small v1.1
-- `uma-m-1p1` - UMA medium v1.1
-- `esen-md-direct-all-omol` - ESEN model for dynamics
+- `uma-s-1` - UMA small v1
+- `uma-m-1p1` - UMA medium v1.1 (higher accuracy, slower)
+- `esen-*` - ESEN models
+
+Pick the **task head** to match the problem: `oc20` for surface adsorption /
+catalysis (the default here), `omat` for bulk inorganic materials, `omol` for
+isolated molecules. Mixing task heads between the slab and the reference makes
+adsorption energies meaningless.
+
+### Adsorption-site backend
+
+Site finding uses **pymatgen's `AdsorbateSiteFinder`** when pymatgen is
+installed (`--site-finder auto`, the default). It is symmetry-aware, so it
+returns only the distinct sites and avoids redundant energy evaluations. A
+self-contained, periodicity-correct geometric finder is used as a fallback
+(`--site-finder builtin`). Pass `--no-symm-reduce` to keep every site.
 
 ## Project Structure
 
@@ -133,6 +150,24 @@ The agent generates the following output files:
 - `{material_id}_sites.json` - Adsorption sites data
 - `{material_id}_best_site.cif` - Structure with adsorbate at best site
 - `{material_id}_results.json` - Complete analysis results
+
+## Methodology notes & limitations
+
+- **Adsorption energies are approximate.** `E_ads = E(slab+ads) − E(slab) −
+  E_ref(ads)` uses tabulated gas-phase reference energies that are *not*
+  recomputed with the active model/task, so absolute values are indicative
+  rather than publication-grade. For rigorous numbers, compute the references
+  with the same model and task.
+- **Single fixed placement per site.** Each site is evaluated at one initial
+  geometry (optionally relaxed). The state-of-the-art recipe is
+  [AdsorbML](https://www.nature.com/articles/s41524-023-01121-5): generate many
+  initial configurations, ML-relax each, and take the minimum. Consider that
+  workflow (or higher-level libraries such as
+  [`quacc`](https://quacc.readthedocs.io) `slab_to_ads_flow` and `atomate2`)
+  for production studies.
+- **Surface-normal assumption.** Site finding assumes the surface lies in the
+  xy-plane with vacuum along z (the convention produced by the slab builder).
+- **`OH` reference energy is a placeholder** and should be verified before use.
 
 ## License
 
