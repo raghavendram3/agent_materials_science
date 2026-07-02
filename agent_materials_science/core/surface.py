@@ -6,6 +6,7 @@ from bulk structures with control over Miller indices, termination,
 and slab parameters.
 """
 
+import warnings
 from typing import Tuple, List, Dict, Any, Optional
 from dataclasses import dataclass
 import numpy as np
@@ -70,57 +71,82 @@ class SurfaceBuilder:
         """
         self.bulk_structure = structure
         self.miller_indices = miller_indices
-        
-        # Cache for generated slabs
-        self._slabs = None
-        self._terminations = None
+
+        # Caches keyed by the generation parameters. (A single unkeyed cache
+        # silently returned stale slabs when the same builder was reused with
+        # different slab/vacuum sizes.)
+        self._slabs_cache: Dict[Tuple, list] = {}
+        self._terminations_cache: Dict[Tuple, List[TerminationInfo]] = {}
     
     @property
     def formula(self) -> str:
         """Chemical formula of the bulk structure."""
         return self.bulk_structure.composition.reduced_formula
-    
-    def get_available_terminations(
+
+    def _get_slabs(
         self,
-        min_slab_size: float = 10.0,
-        min_vacuum_size: float = 15.0,
-    ) -> List[TerminationInfo]:
-        """
-        Get all available surface terminations.
-        
-        Args:
-            min_slab_size: Minimum slab thickness (Å)
-            min_vacuum_size: Minimum vacuum thickness (Å)
-            
-        Returns:
-            List of TerminationInfo objects
-        """
-        if self._terminations is not None:
-            return self._terminations
-        
+        min_slab_size: float,
+        min_vacuum_size: float,
+        in_unit_planes: bool,
+        center_slab: bool,
+    ) -> list:
+        """Generate (or fetch cached) pymatgen slabs for the given parameters."""
+        key = (float(min_slab_size), float(min_vacuum_size),
+               bool(in_unit_planes), bool(center_slab))
+        if key in self._slabs_cache:
+            return self._slabs_cache[key]
+
         h, k, l = self.miller_indices
-        
         slabgen = SlabGenerator(
             initial_structure=self.bulk_structure,
             miller_index=(h, k, l),
             min_slab_size=min_slab_size,
             min_vacuum_size=min_vacuum_size,
-            center_slab=True,
-            in_unit_planes=False,
+            center_slab=center_slab,
+            in_unit_planes=in_unit_planes,
             primitive=True,
             max_normal_search=max(abs(h), abs(k), abs(l)) + 1,
         )
-        
-        self._slabs = slabgen.get_slabs()
-        
-        if not self._slabs:
+        slabs = slabgen.get_slabs()
+        if not slabs:
             raise ValueError(
                 f"Could not generate slabs for ({h},{k},{l}). "
                 "The Miller indices may be incompatible with the crystal structure."
             )
-        
-        self._terminations = []
-        for i, slab in enumerate(self._slabs):
+        self._slabs_cache[key] = slabs
+        return slabs
+
+    def get_available_terminations(
+        self,
+        min_slab_size: float = 10.0,
+        min_vacuum_size: float = 15.0,
+        in_unit_planes: bool = False,
+        center_slab: bool = True,
+    ) -> List[TerminationInfo]:
+        """
+        Get all available surface terminations.
+
+        Args:
+            min_slab_size: Minimum slab thickness. In Angstrom when
+                ``in_unit_planes=False``; in number of (hkl) planes when
+                ``in_unit_planes=True``.
+            min_vacuum_size: Minimum vacuum thickness (Å)
+            in_unit_planes: Interpret ``min_slab_size`` in crystal planes.
+            center_slab: Center the slab along the surface normal.
+
+        Returns:
+            List of TerminationInfo objects
+        """
+        key = (float(min_slab_size), float(min_vacuum_size),
+               bool(in_unit_planes), bool(center_slab))
+        if key in self._terminations_cache:
+            return self._terminations_cache[key]
+
+        slabs = self._get_slabs(min_slab_size, min_vacuum_size,
+                                in_unit_planes, center_slab)
+
+        terminations = []
+        for i, slab in enumerate(slabs):
             term = TerminationInfo(
                 index=i,
                 formula=slab.composition.reduced_formula,
@@ -129,9 +155,10 @@ class SurfaceBuilder:
                 is_polar=slab.is_polar(),
                 surface_area=slab.surface_area,
             )
-            self._terminations.append(term)
-        
-        return self._terminations
+            terminations.append(term)
+
+        self._terminations_cache[key] = terminations
+        return terminations
     
     def build_slab(
         self,
@@ -140,33 +167,41 @@ class SurfaceBuilder:
         min_vacuum_size: float = 15.0,
         supercell: Tuple[int, int] = (1, 1),
         fix_layers: int = 0,
+        in_unit_planes: bool = False,
+        center_slab: bool = True,
     ) -> Atoms:
         """
         Build a surface slab with specified parameters.
-        
+
         Args:
             termination: Index of surface termination to use
-            min_slab_size: Minimum slab thickness (Å)
+            min_slab_size: Minimum slab thickness. In Angstrom when
+                ``in_unit_planes=False``; in number of (hkl) planes when
+                ``in_unit_planes=True``.
             min_vacuum_size: Vacuum thickness (Å)
             supercell: In-plane supercell (nx, ny)
             fix_layers: Number of bottom layers to fix (0 = no fixing)
-            
+            in_unit_planes: Interpret ``min_slab_size`` in crystal planes.
+            center_slab: Center the slab along the surface normal.
+
         Returns:
             ASE Atoms slab
         """
-        # Ensure terminations are calculated
-        self.get_available_terminations(min_slab_size, min_vacuum_size)
-        
-        if not self._slabs:
-            raise RuntimeError("No slabs available")
-        
+        slabs = self._get_slabs(
+            min_slab_size, min_vacuum_size, in_unit_planes, center_slab
+        )
+
         # Validate termination index
-        if termination >= len(self._slabs):
-            print(f"Warning: Termination {termination} not available. Using 0.")
+        if termination >= len(slabs):
+            warnings.warn(
+                f"Termination {termination} not available "
+                f"(only {len(slabs)} termination(s)). Using 0.",
+                stacklevel=2,
+            )
             termination = 0
-        
+
         # Get pymatgen slab
-        pmg_slab = self._slabs[termination]
+        pmg_slab = slabs[termination]
         
         # Convert to ASE
         slab = structure_to_atoms(pmg_slab)

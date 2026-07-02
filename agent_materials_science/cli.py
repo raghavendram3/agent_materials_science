@@ -165,20 +165,37 @@ Examples:
     calc_group.add_argument(
         "--model",
         type=str,
-        default="uma-s-1p1",
-        help="FairChem model name. Default: uma-s-1p1"
+        default=None,
+        help="FairChem model name or local checkpoint path. "
+             "Default: env FAIRCHEM_MODEL or 'uma-s-1p2'"
     )
     calc_group.add_argument(
         "--task",
         type=str,
-        default="oc20",
+        default=None,
         help="UMA task head ('oc20' for adsorption/catalysis, 'omat' for "
-             "bulk materials, 'omol' for molecules). Default: oc20"
+             "bulk materials, 'omol' for molecules). "
+             "Default: env FAIRCHEM_TASK or 'oc20'"
+    )
+    calc_group.add_argument(
+        "--device",
+        type=str,
+        choices=["auto", "cpu", "cuda"],
+        default=None,
+        help="Compute device. 'auto' uses CUDA when available. "
+             "Default: env FAIRCHEM_DEVICE or 'auto'"
     )
     calc_group.add_argument(
         "--gpu",
         action="store_true",
-        help="Use GPU for calculations (if available)"
+        help="Deprecated alias for --device cuda"
+    )
+    calc_group.add_argument(
+        "--fix-layers",
+        type=int,
+        default=0,
+        help="Number of bottom slab layers to constrain (FixAtoms) during "
+             "relaxations. Recommended >= 2 with --relax. Default: 0"
     )
     
     # Output parameters
@@ -239,10 +256,12 @@ def main(argv=None):
     
     # Handle utility commands
     if args.list_adsorbates:
+        from .config import ADSORBATE_DESCRIPTIONS
         print("\nAvailable adsorbates:")
         print("-" * 40)
         for ads in get_available_adsorbates():
-            print(f"  {ads}")
+            desc = ADSORBATE_DESCRIPTIONS.get(ads, "")
+            print(f"  {ads:8s} {desc}")
         print()
         return 0
     
@@ -266,7 +285,10 @@ def main(argv=None):
         
         # FairChem status
         fc = status.get("fairchem", {})
-        print(f"  FairChem: {'✓' if fc.get('fairchem_available') else '✗'}")
+        fc_ver = fc.get("fairchem_version")
+        fc_label = f"✓ ({fc_ver})" if fc.get("fairchem_available") and fc_ver else (
+            "✓" if fc.get("fairchem_available") else "✗")
+        print(f"  FairChem: {fc_label}")
         if fc.get('cuda_available'):
             print(f"  CUDA: ✓ (torch {fc.get('torch_version', 'unknown')})")
         else:
@@ -317,9 +339,10 @@ def main(argv=None):
         symm_reduce=not args.no_symm_reduce,
         calculate_energies=args.calculate_energies,
         relax_structures=args.relax,
+        fix_layers=args.fix_layers,
         fairchem_model=args.model,
         fairchem_task=args.task,
-        use_gpu=args.gpu,
+        device=args.device or ("cuda" if args.gpu else None),
         output_dir=args.output_dir,
         save_all_sites=args.save_all_sites,
         verbose=not args.quiet,

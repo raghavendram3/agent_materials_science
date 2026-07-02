@@ -30,8 +30,8 @@ def analyze_single_adsorbate():
         vacuum=15.0,
         supercell=(2, 2),
         calculate_energies=True,      # Enable energy calculations
-        fairchem_model="uma-s-1",     # Use UMA-Small model
-        use_gpu=False,                # Use CPU (set True if GPU available)
+        fairchem_model="uma-s-1p2",   # UMA-Small v1.2 (uma-s-1 was removed upstream)
+        device="auto",                # "auto" uses CUDA when available
         output_dir="outputs/pt_co",
         verbose=True,
     )
@@ -64,8 +64,8 @@ def compare_adsorbates():
             vacuum=15.0,
             supercell=(2, 2),
             calculate_energies=True,
-            fairchem_model="uma-s-1",
-            use_gpu=False,
+            fairchem_model="uma-s-1p2",
+            device="auto",
             output_dir=f"outputs/pt_{ads.lower()}",
             verbose=False,  # Quieter output for comparison
         )

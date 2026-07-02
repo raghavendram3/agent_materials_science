@@ -105,21 +105,26 @@ class AdsorptionSiteFinder:
         self,
         slab: Atoms,
         height_offset: float = 2.0,
-        neighbor_cutoff: float = 3.5,
+        neighbor_cutoff: Optional[float] = None,
         top_layer_threshold: float = 1.5,
     ):
         """
         Initialize the adsorption site finder.
-        
+
         Args:
             slab: ASE Atoms object (surface slab)
             height_offset: Height above surface for placing adsorbates (Å)
-            neighbor_cutoff: Cutoff distance for identifying neighbors (Å)
+            neighbor_cutoff: Cutoff distance for identifying neighbors (Å).
+                None (default) estimates it automatically as 1.2x the
+                nearest-neighbor distance within the top layer, clipped to
+                [2.0, 6.0] Å. A fixed cutoff (the old default was 3.5 Å)
+                silently misses bridge/hollow sites on surfaces with larger
+                spacings, e.g. Si(111) where the surface NN distance is
+                3.84 Å.
             top_layer_threshold: Z-distance threshold for top layer atoms (Å)
         """
         self.slab = slab
         self.height_offset = height_offset
-        self.neighbor_cutoff = neighbor_cutoff
         self.top_layer_threshold = top_layer_threshold
 
         # In-plane (surface) cell vectors used for the minimum-image
@@ -135,10 +140,38 @@ class AdsorptionSiteFinder:
         # periodic in-plane and non-periodic along the surface normal.
         self._periodic_inplane = bool(pbc[0]) and bool(pbc[1])
 
-        # Identify surface atoms
+        # Identify surface atoms.
+        # NOTE: _find_top_layer uses neighbor_cutoff only for a lateral
+        # de-duplication heuristic; use a provisional value first, then
+        # refine from the actual top-layer geometry if auto mode is on.
+        self.neighbor_cutoff = neighbor_cutoff if neighbor_cutoff is not None else 3.5
         self._top_layer_indices = self._find_top_layer()
         self._top_layer_positions = slab.get_positions()[self._top_layer_indices]
-        
+
+        if neighbor_cutoff is None:
+            self.neighbor_cutoff = self._estimate_neighbor_cutoff()
+
+    def _estimate_neighbor_cutoff(self) -> float:
+        """
+        Estimate a neighbor cutoff from the top-layer nearest-neighbor
+        distance (minimum-image in-plane): cutoff = 1.2 * d_NN, clipped to
+        [2.0, 6.0] Å. Falls back to 3.5 Å when fewer than two top-layer
+        atoms are available.
+        """
+        pos = self._top_layer_positions
+        if len(pos) < 2:
+            return 3.5
+
+        d_min = np.inf
+        for i in range(len(pos)):
+            for j in range(i + 1, len(pos)):
+                d = self._mic_distance(pos[i], pos[j])
+                if 0.1 < d < d_min:
+                    d_min = d
+        if not np.isfinite(d_min):
+            return 3.5
+        return float(np.clip(1.2 * d_min, 2.0, 6.0))
+
     @property
     def top_layer_indices(self) -> List[int]:
         """Indices of atoms in the top layer."""

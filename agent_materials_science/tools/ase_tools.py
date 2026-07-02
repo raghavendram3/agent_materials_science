@@ -245,7 +245,9 @@ def save_outputs(
             write(path, atoms, format='cif')
         elif fmt == 'vasp':
             path = os.path.join(outdir, f"POSCAR_{base_name}")
-            write(path, atoms, format='vasp')
+            # sort=True groups atoms by species so the POSCAR has one block
+            # per element (ase >= 3.26 supports the keyword).
+            write(path, atoms, format='vasp', sort=True)
         elif fmt == 'xyz':
             path = os.path.join(outdir, f"{base_name}.xyz")
             write(path, atoms, format='xyz')

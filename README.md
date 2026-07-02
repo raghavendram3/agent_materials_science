@@ -14,19 +14,31 @@ A Python agent for automated materials science workflows, focusing on surface ad
 
 ## Installation
 
+Requires **Python 3.11–3.13** (driven by fairchem-core 2.x).
+
 ```bash
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # or: venv\Scripts\activate  # Windows
 
-# Install dependencies
-pip install -r requirements.txt
+# Install the package (geometry workflow: slabs + adsorption sites)
+pip install .
+
+# Optional: ML adsorption energies (installs torch ~=2.8, large download)
+pip install ".[ml]"
+
+# Optional: AdsorbML production workflows
+pip install ".[adsorbml]"
 
 # Set up Materials Project API key
 export MP_API_KEY="your_api_key_here"
 # Or create a .env file with: MP_API_KEY=your_api_key_here
 ```
+
+UMA checkpoints are gated on Hugging Face: request access to
+[facebook/UMA](https://huggingface.co/facebook/UMA) and run
+`huggingface-cli login` once.
 
 ## Quick Start
 
@@ -39,8 +51,8 @@ python -m agent_materials_science.cli --material Si --miller 1,1,1 --adsorbate H
 # Using Materials Project ID
 python -m agent_materials_science.cli --mp-id mp-149 --miller 1,1,0 --adsorbate CO
 
-# Full workflow with energy calculations
-python -m agent_materials_science.cli \
+# Full workflow with relaxed energy calculations
+agent-materials-science \
     --material SrTiO3 \
     --miller 1,0,0 \
     --adsorbate O \
@@ -48,8 +60,13 @@ python -m agent_materials_science.cli \
     --vacuum 15 \
     --supercell 2,2 \
     --calculate-energies \
+    --relax --fix-layers 2 \
+    --device auto \
     --output-dir outputs/srtio3_analysis
 ```
+
+The `agent-materials-science` console script is installed with the package;
+`python -m agent_materials_science.cli` works too.
 
 ### Python API
 
@@ -85,24 +102,34 @@ print(f"Output files: {result.output_files}")
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MP_API_KEY` | Materials Project API key | Required |
-| `FAIRCHEM_MODEL` | FairChem model name | `uma-s-1p1` |
-| `FAIRCHEM_DEVICE` | Device for ML calculations | `cpu` |
+| `FAIRCHEM_MODEL` | FairChem model name | `uma-s-1p2` |
+| `FAIRCHEM_TASK` | UMA task head (`oc20`, `omat`, `omol`, …) | `oc20` |
+| `FAIRCHEM_DEVICE` | Device: `auto`, `cpu`, `cuda` | `auto` |
+
+Explicit constructor/CLI arguments always take precedence over environment
+variables.
 
 ### Supported Adsorbates
 
-- **Single atoms**: H, O, N, C, S
-- **Molecules**: CO, OH, H2O, NH3, CO2, CH4
+27 species, including atoms (H, O, N, C, S, F, Cl), diatomics (H2, O2, N2,
+CO/OC, OH/HO, NO/ON, HF, HCl) and molecules (H2O, CO2, N2O, NH3, CH4, C2H2,
+C2H4, HCOO, CH3OH). Run `agent-materials-science --list-adsorbates` for the
+authoritative list with descriptions.
 
 ### FairChem Models
 
 UMA models require **FairChem v2** and a Hugging Face account with access
 granted to the UMA model repository (`huggingface-cli login`).
 
-- `uma-s-1p2` - UMA small v1.2 (latest small model; recommended)
+- `uma-s-1p2` - UMA small v1.2 (latest small model; recommended, default)
 - `uma-s-1p1` - UMA small v1.1
-- `uma-s-1` - UMA small v1
 - `uma-m-1p1` - UMA medium v1.1 (higher accuracy, slower)
-- `esen-*` - ESEN models
+- `esen-*` - eSEN models
+
+> `uma-s-1` was **removed** from the FairChem registry and can no longer be
+> downloaded. Run `agent-materials-science --list-models` to query the live
+> registry when fairchem-core is installed. A local checkpoint file path can
+> be passed via `--model /path/to/checkpoint.pt`.
 
 Pick the **task head** to match the problem: `oc20` for surface adsorption /
 catalysis (the default here), `omat` for bulk inorganic materials, `omol` for
@@ -153,21 +180,29 @@ The agent generates the following output files:
 
 ## Methodology notes & limitations
 
-- **Adsorption energies are approximate.** `E_ads = E(slab+ads) − E(slab) −
-  E_ref(ads)` uses tabulated gas-phase reference energies that are *not*
-  recomputed with the active model/task, so absolute values are indicative
-  rather than publication-grade. For rigorous numbers, compute the references
-  with the same model and task.
-- **Single fixed placement per site.** Each site is evaluated at one initial
-  geometry (optionally relaxed). The state-of-the-art recipe is
+- **Adsorption-energy convention.** `E_ads = E(slab+ads) − E(slab) −
+  E_gas(ads)`, where `E_gas` follows the **OC20 convention**: a linear
+  combination of per-element reference energies (H −3.477, C −7.282,
+  O −7.204, N −8.083 eV, from the OC20 paper) that pairs consistently with
+  UMA `oc20` total energies — this is the scheme recommended by the FairChem
+  documentation. Adsorbates containing other elements fall back to relative
+  energies (site ranking is still valid) unless you provide per-element
+  overrides via `get_adsorbate_reference_energy(..., overrides=...)`.
+- **Consistent relaxation.** With `--relax`, the clean slab is relaxed once
+  (before site finding) and each slab+adsorbate system is relaxed, so both
+  totals in `E_ads` come from relaxed geometries. Use `--fix-layers 2` (or
+  more) to hold the bottom layers bulk-like during relaxations.
+- **ML accuracy.** Energies come from a machine-learned potential (UMA);
+  expect ~0.1 eV-scale deviations from explicit DFT depending on the system.
+- **Single initial placement per site.** Each site is evaluated from one
+  initial geometry (optionally relaxed). The state-of-the-art recipe is
   [AdsorbML](https://www.nature.com/articles/s41524-023-01121-5): generate many
-  initial configurations, ML-relax each, and take the minimum. Consider that
-  workflow (or higher-level libraries such as
+  initial configurations, ML-relax each, and take the minimum — available via
+  `pip install "fairchem-core[adsorbml]"` (or higher-level libraries such as
   [`quacc`](https://quacc.readthedocs.io) `slab_to_ads_flow` and `atomate2`)
   for production studies.
 - **Surface-normal assumption.** Site finding assumes the surface lies in the
   xy-plane with vacuum along z (the convention produced by the slab builder).
-- **`OH` reference energy is a placeholder** and should be verified before use.
 
 ## License
 

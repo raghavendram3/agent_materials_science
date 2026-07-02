@@ -24,7 +24,8 @@ from ..tools.materials_project import MaterialsProjectTool
 from ..tools.ase_tools import save_outputs, get_slab_info
 from ..tools.converters import create_adsorbate, place_adsorbate_at_site
 from ..tools.fairchem_calc import (
-    FairchemCalculator, FAIRCHEM_AVAILABLE, ADSORBATE_REFERENCE_ENERGIES
+    FairchemCalculator, FAIRCHEM_AVAILABLE,
+    get_adsorbate_reference_energy,
 )
 
 from .surface import SurfaceBuilder, TerminationInfo, miller_to_string
@@ -180,6 +181,8 @@ class AdsorptionWorkflow:
         self._sites = []
         self._adsorbate = None
         self._calculator = None
+        # Relaxed slab+adsorbate structures, keyed by id(site).
+        self._relaxed_structures: Dict[int, Atoms] = {}
         
         # Logging
         self.errors = []
@@ -189,6 +192,16 @@ class AdsorptionWorkflow:
         """Print message if verbose mode is enabled."""
         if self.config.verbose:
             print(msg)
+
+    def _get_calculator(self) -> FairchemCalculator:
+        """Lazily create (and cache) the FairChem calculator."""
+        if self._calculator is None:
+            self._calculator = FairchemCalculator(
+                model_name=self.config.fairchem_model,
+                device=self.config.device,
+                task_name=self.config.fairchem_task,
+            )
+        return self._calculator
     
     def run(self) -> WorkflowResult:
         """
@@ -214,7 +227,37 @@ class AdsorptionWorkflow:
         self.log(f"  ✓ Generated slab with {slab_info['n_atoms']} atoms")
         self.log(f"    Thickness: {slab_info['thickness']:.2f} Å")
         self.log(f"    Available terminations: {len(terminations)}")
-        
+
+        # Step 2b: Pre-relax the clean slab so that (a) adsorption sites are
+        # found on the relaxed surface geometry and (b) E_slab in
+        # E_ads = E(slab+ads) - E(slab) - E(ads) is computed from the same
+        # relaxed reference as the combined system. (Previously only the
+        # slab+adsorbate system was relaxed, which systematically
+        # over-estimated binding by the slab-relaxation energy.)
+        if (
+            self.config.calculate_energies
+            and self.config.relax_structures
+            and FAIRCHEM_AVAILABLE
+        ):
+            self.log("    Relaxing clean slab (consistent E_ads reference)...")
+            try:
+                calc = self._get_calculator()
+                slab = calc.relax_structure(
+                    slab,
+                    fmax=self.config.relax_fmax,
+                    steps=self.config.relax_steps,
+                )
+                relax_info = slab.info.get("relaxation", {})
+                self.log(
+                    f"    ✓ Clean slab relaxed in "
+                    f"{relax_info.get('steps', '?')} steps "
+                    f"(converged: {relax_info.get('converged', '?')})"
+                )
+                slab_info = get_slab_info(slab)
+            except Exception as e:
+                self.warnings.append(f"Clean-slab relaxation failed: {e}")
+                self.log(f"    ! Clean-slab relaxation failed: {e}")
+
         # Step 3: Find adsorption sites
         self.log(f"\n[3/6] Finding adsorption sites...")
         sites, site_summary = self._find_sites(slab)
@@ -302,21 +345,35 @@ class AdsorptionWorkflow:
         """Create surface slab."""
         try:
             builder = SurfaceBuilder(bulk_structure, self.config.miller_indices)
-            
+
+            # Slab thickness: interpret n_layers as (hkl) planes when
+            # layers_in_unit_planes=True (pymatgen in_unit_planes); otherwise
+            # fall back to the legacy 2.5 Å/layer heuristic.
+            in_unit_planes = self.config.layers_in_unit_planes
+            min_slab_size = (
+                self.config.n_layers if in_unit_planes
+                else self.config.n_layers * 2.5
+            )
+
             # Get terminations
             terminations = builder.get_available_terminations(
-                min_slab_size=self.config.n_layers * 2.5,  # Approximate
+                min_slab_size=min_slab_size,
                 min_vacuum_size=self.config.vacuum,
+                in_unit_planes=in_unit_planes,
+                center_slab=self.config.center_slab,
             )
-            
+
             # Build slab
             slab = builder.build_slab(
                 termination=self.config.termination,
-                min_slab_size=self.config.n_layers * 2.5,
+                min_slab_size=min_slab_size,
                 min_vacuum_size=self.config.vacuum,
                 supercell=self.config.supercell,
+                fix_layers=self.config.fix_layers,
+                in_unit_planes=in_unit_planes,
+                center_slab=self.config.center_slab,
             )
-            
+
             return slab, terminations
             
         except Exception as e:
@@ -388,62 +445,65 @@ class AdsorptionWorkflow:
         """
         Calculate adsorption energies for sites using FairChem ML potential.
         
-        Uses reference energies for isolated adsorbates since FairChem cannot
-        calculate energies for single atoms or small molecules (no edges in graph).
-        
-        E_ads = E(slab+ads) - E(slab) - E(ads_reference)
+        E_ads = E(slab+ads) - E(slab) - E_gas(ads)
+
+        The gas-phase reference E_gas follows the OC20 convention (linear
+        combination of per-element reference energies), which is the scheme
+        recommended by FairChem for the UMA 'oc20' task. When
+        relax_structures=True, the incoming slab has already been relaxed
+        (see run()), so E_slab and E_combined are computed consistently.
         """
         try:
-            # Initialize calculator
-            calc = FairchemCalculator(
-                model_name=self.config.fairchem_model,
-                cpu=not self.config.use_gpu,
-                task_name=self.config.fairchem_task,
-            )
-            
-            # Calculate clean slab energy
+            calc = self._get_calculator()
+
+            # Clean slab energy (single point; slab is pre-relaxed when
+            # relax_structures=True).
             self.log(f"    Calculating clean slab energy...")
             e_slab = calc.calculate_energy(slab)
             self.log(f"    Clean slab energy: {e_slab:.3f} eV")
-            
-            # Get adsorbate reference energy (cannot calculate directly for single atoms)
+
+            # Gas-phase reference energy (OC20 linear atomic scheme).
             adsorbate_name = self.config.adsorbate
-            if adsorbate_name in ADSORBATE_REFERENCE_ENERGIES:
-                e_ads = ADSORBATE_REFERENCE_ENERGIES[adsorbate_name]
-                self.log(f"    Adsorbate reference energy ({adsorbate_name}): {e_ads:.3f} eV")
-                self.warnings.append(
-                    "Adsorption energies use tabulated gas-phase reference "
-                    "energies that were NOT computed with the active FairChem "
-                    f"model/task ('{self.config.fairchem_model}'/"
-                    f"'{self.config.fairchem_task}'). Absolute E_ads values are "
-                    "therefore only approximate; for publication-quality numbers "
-                    "compute the reference with the same model and task, or use "
-                    "an AdsorbML-style workflow."
+            reference_details: Dict[str, Any] = {}
+            try:
+                e_ads, reference_details = get_adsorbate_reference_energy(
+                    adsorbate_name
                 )
-            else:
-                # Try to calculate if it's a larger molecule
-                try:
-                    e_ads = calc.calculate_energy(adsorbate)
-                    self.log(f"    Adsorbate energy (calculated): {e_ads:.3f} eV")
-                except Exception as e:
-                    self.warnings.append(
-                        f"No reference energy for '{adsorbate_name}'. "
-                        f"Available: {list(ADSORBATE_REFERENCE_ENERGIES.keys())}. "
-                        f"Using e_ads=0 (relative energies only)."
-                    )
-                    e_ads = 0.0
-                    self.log(f"    Adsorbate energy: Using 0 (relative energies only)")
-            
-            # Calculate energy for each site
+                reference_used = True
+                self.log(
+                    f"    Gas-phase reference ({adsorbate_name}, OC20 "
+                    f"convention): {e_ads:.3f} eV"
+                )
+                self.warnings.append(
+                    "Adsorption energies follow the OC20 convention: E_gas is "
+                    "a linear combination of per-element reference energies "
+                    "(H/C/O/N from the OC20 paper), consistent with UMA "
+                    f"'{self.config.fairchem_task}' total energies. Remaining "
+                    "uncertainty comes from the ML potential itself and from "
+                    "heuristic initial placements; for production-grade "
+                    "minima consider the AdsorbML workflow "
+                    "(pip install fairchem-core[adsorbml])."
+                )
+            except ValueError as err:
+                reference_used = False
+                e_ads = 0.0
+                self.warnings.append(
+                    f"{err} Using e_ads=0: energies are RELATIVE (site "
+                    f"ranking is still valid)."
+                )
+                self.log(f"    ! {err}")
+                self.log(f"    Using e_ads = 0 (relative energies only)")
+
+            # Energy for each site.
             n_sites = len(sites)
             for i, site in enumerate(sites):
                 self.log(f"    Calculating site {i+1}/{n_sites} ({site.site_type})...")
-                
+
                 # Place adsorbate at site
                 slab_with_ads = place_adsorbate_at_site(
                     slab, adsorbate, site.position
                 )
-                
+
                 # Optionally relax structure
                 if self.config.relax_structures:
                     self.log(f"      Relaxing structure...")
@@ -452,23 +512,31 @@ class AdsorptionWorkflow:
                         fmax=self.config.relax_fmax,
                         steps=self.config.relax_steps,
                     )
-                
-                # Calculate energy of slab+adsorbate system
+                    self._relaxed_structures[id(site)] = slab_with_ads
+                    relax_info = slab_with_ads.info.get("relaxation", {})
+                    site.metadata["relaxation"] = relax_info
+
+                # Energy of the slab+adsorbate system
                 e_combined = calc.calculate_energy(slab_with_ads)
-                
-                # Adsorption energy: E_ads = E(slab+ads) - E(slab) - E(ads)
+
+                # Adsorption energy: E_ads = E(slab+ads) - E(slab) - E(gas)
                 site.energy = e_combined - e_slab - e_ads
                 self.log(f"      E_combined: {e_combined:.3f} eV, E_ads: {site.energy:.3f} eV")
-            
+
             energy_data = {
                 "e_slab": e_slab,
                 "e_adsorbate_reference": e_ads,
                 "adsorbate_name": adsorbate_name,
-                "reference_used": adsorbate_name in ADSORBATE_REFERENCE_ENERGIES,
+                "reference_used": reference_used,
+                "reference_details": reference_details,
+                "model": self.config.fairchem_model,
+                "task": self.config.fairchem_task,
+                "relaxed": self.config.relax_structures,
+                "relax_fmax": self.config.relax_fmax if self.config.relax_structures else None,
             }
-            
+
             return sites, energy_data
-            
+
         except Exception as e:
             self.errors.append(f"Energy calculation failed: {e}")
             self.warnings.append("Continuing without energies")
@@ -513,11 +581,15 @@ class AdsorptionWorkflow:
             slab_files = save_outputs(slab, self.config.output_dir, f"{base_name}_slab")
             files.extend(slab_files)
             
-            # Save best site structure (slab + adsorbate)
+            # Save best site structure (slab + adsorbate). Use the relaxed
+            # geometry when the reported energy came from a relaxation, so
+            # the saved structure matches the reported number.
             if best_site:
-                slab_with_ads = place_adsorbate_at_site(
-                    slab, adsorbate, best_site.position
-                )
+                slab_with_ads = self._relaxed_structures.get(id(best_site))
+                if slab_with_ads is None:
+                    slab_with_ads = place_adsorbate_at_site(
+                        slab, adsorbate, best_site.position
+                    )
                 best_files = save_outputs(
                     slab_with_ads, 
                     self.config.output_dir, 
@@ -542,9 +614,11 @@ class AdsorptionWorkflow:
                 os.makedirs(sites_dir, exist_ok=True)
                 
                 for i, site in enumerate(sites):
-                    slab_with_ads = place_adsorbate_at_site(
-                        slab, adsorbate, site.position
-                    )
+                    slab_with_ads = self._relaxed_structures.get(id(site))
+                    if slab_with_ads is None:
+                        slab_with_ads = place_adsorbate_at_site(
+                            slab, adsorbate, site.position
+                        )
                     site_name = f"{base_name}_site{i}_{site.site_type}"
                     site_files = save_outputs(slab_with_ads, sites_dir, site_name)
                     files.extend(site_files)

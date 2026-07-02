@@ -7,13 +7,20 @@ tools, and FairChem UMA machine learning potentials.
 """
 
 from .config import AgentConfig
-from .agent import MaterialsScienceAgent, AgentResult
+from .agent import (
+    MaterialsScienceAgent,
+    AgentResult,
+    InteractiveAgent,
+    run_analysis,
+)
 
-__version__ = "1.0.0"
+__version__ = "0.2.0"
 __author__ = "Materials Science Agent"
 
 __all__ = [
     "MaterialsScienceAgent",
     "AgentConfig",
     "AgentResult",
+    "InteractiveAgent",
+    "run_analysis",
 ]

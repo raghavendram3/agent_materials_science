@@ -78,20 +78,13 @@ class MaterialsProjectTool:
         
         try:
             with self._get_client() as mpr:
-                results = mpr.materials.summary.search(
-                    material_ids=[mp_id],
-                    fields=["material_id", "structure", "formula_pretty"],
-                )
-                
-                if not results:
-                    raise RuntimeError(f"No structure found for {mp_id}")
-                
-                doc = results[0]
-                struct = getattr(doc, "structure", None)
-                
+                # Canonical high-level accessor: resolves deprecated /
+                # re-mapped material IDs automatically.
+                struct = mpr.get_structure_by_material_id(mp_id)
+
                 if struct is None:
-                    raise RuntimeError(f"Structure data missing for {mp_id}")
-                
+                    raise RuntimeError(f"No structure found for {mp_id}")
+
                 return struct
                 
         except Exception as e:
@@ -176,12 +169,27 @@ class MaterialsProjectTool:
             
         Returns:
             List of material summaries
+
+        Raises:
+            ValueError: If neither ``formula`` nor ``elements`` is given
+                (an unconstrained query would download the entire Materials
+                Project summary collection - roughly 150k documents).
         """
+        if not formula and not elements:
+            raise ValueError(
+                "search_materials requires at least one criterion "
+                "(formula or elements); an unconstrained query would "
+                "download the entire Materials Project database."
+            )
+
         try:
             with self._get_client() as mpr:
                 kwargs = {
                     "fields": ["material_id", "formula_pretty", "energy_above_hull",
-                              "band_gap", "is_stable", "symmetry"]
+                              "band_gap", "is_stable", "symmetry"],
+                    # Bound the download: one chunk, sized to the request.
+                    "num_chunks": 1,
+                    "chunk_size": max(10, min(int(max_results), 100)),
                 }
                 
                 if formula:
