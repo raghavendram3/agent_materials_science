@@ -1,5 +1,5 @@
 # Materials Science Adsorption Agent
-![MSA](ML_ads.png)
+![MSA](https://raw.githubusercontent.com/raghavendram3/agent_materials_science/main/ML_ads.png)
 A Python agent for automated materials science workflows, focusing on surface adsorption analysis using Materials Project data, ASE/pymatgen tools, and FairChem UMA machine learning potentials.
 
 ## Features
@@ -22,6 +22,9 @@ python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # or: venv\Scripts\activate  # Windows
 
+# Install from PyPI (after release)
+pip install agent-materials-science
+
 # Install the package (geometry workflow: slabs + adsorption sites)
 pip install .
 
@@ -39,6 +42,21 @@ export MP_API_KEY="your_api_key_here"
 UMA checkpoints are gated on Hugging Face: request access to
 [facebook/UMA](https://huggingface.co/facebook/UMA) and run
 `huggingface-cli login` once.
+
+## Releasing to PyPI
+
+```bash
+# Build source and wheel distributions
+python -m pip install --upgrade build twine
+python -m build
+python -m twine check dist/*
+
+# Upload to TestPyPI (recommended first)
+python -m twine upload --repository testpypi dist/*
+
+# Upload to PyPI
+python -m twine upload dist/*
+```
 
 ## Quick Start
 

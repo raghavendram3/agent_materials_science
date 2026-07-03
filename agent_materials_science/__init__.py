@@ -14,7 +14,7 @@ from .agent import (
     run_analysis,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__ = "Materials Science Agent"
 
 __all__ = [
