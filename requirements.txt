@@ -1,0 +1,20 @@
+# Core dependencies (geometry workflow: MP fetch, slabs, adsorption sites)
+# Python >= 3.11 required (driven by fairchem-core; pymatgen needs >= 3.10)
+mp-api>=0.45
+pymatgen>=2024.11.13
+ase>=3.26.0
+numpy>=2.0,<2.5
+scipy>=1.11.0
+python-dotenv>=1.0.0
+
+# --- Optional: ML energy calculations -------------------------------------
+# fairchem-core 2.x requires Python >=3.11,<3.14 and installs torch ~=2.8
+# (large download). UMA checkpoints are gated on Hugging Face: request
+# access to https://huggingface.co/facebook/UMA and run
+# `huggingface-cli login` once.
+#
+#   pip install fairchem-core>=2.21.0
+#
+# For AdsorbML-style production workflows:
+#
+#   pip install "fairchem-core[adsorbml]>=2.21.0"
