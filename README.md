@@ -205,6 +205,51 @@ The agent generates the following output files:
 - **Surface-normal assumption.** Site finding assumes the surface lies in the
   xy-plane with vacuum along z (the convention produced by the slab builder).
 
+## Acknowledgments and credits
+
+This package builds on several open scientific software projects and data
+resources:
+
+- **Materials Project** and the `mp-api` client for materials data access.
+- **pymatgen** for structure handling, slab generation, and adsorption-site
+  logic.
+- **ASE (Atomic Simulation Environment)** for atomistic structure operations.
+- **FairChem (UMA models)** and OC20-style energy conventions for ML-based
+  adsorption-energy workflows.
+- **NumPy** and **SciPy** for numerical/scientific computation.
+
+Please cite these upstream tools/resources in addition to this package when
+they are part of your workflow.
+
+## Citing this package
+
+If this package contributes to published work, please cite the software and
+the exact version used.
+
+### Suggested software citation (BibTeX)
+
+```bibtex
+@software{meena_agent_materials_science_2026,
+  author  = {Meena, Raghavendra},
+  title   = {agent-materials-science: A Python agent for surface adsorption workflows},
+  year    = {2026},
+  version = {0.2.3},
+  url     = {https://github.com/raghavendram3/agent_materials_science}
+}
+```
+
+### Also cite underlying methods/data
+
+For reproducible scientific reporting, also cite the official publications for:
+
+- Materials Project / mp-api
+- pymatgen
+- ASE
+- FairChem / OC20 conventions used in your calculations
+
+Include your runtime settings (model/task, slab setup, relaxation settings, and
+adsorbate reference convention) in Methods/SI so others can reproduce results.
+
 ## License
 
 MIT License
